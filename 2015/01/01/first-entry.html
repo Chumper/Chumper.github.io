@@ -66,41 +66,17 @@
 <div class="paragraph">
 <p>In quo debet iriure adolescens, nec molestie accusata ad, sea te malis atomorum petentium. Convenire corrumpit id vis, ad accumsan interesset usu. Esse dictas sea ne. Cum constituto deterruisset no, vim laudem doctus at. Nam dicat zril ea, mei omnesque explicari pertinacia ea. Nihil dicunt aliquam nam ne.</p>
 </div>
-<div class="listingblock">
+<div class="imageblock">
 <div class="content">
-<pre>Failed to generate image: Could not find the 'dot' executable in PATH; add it to the PATH or specify its location using the 'dot' document attribute
-digraph g {
-    a -&gt; b
-    b -&gt; c
-    c -&gt; d
-    d -&gt; a
-}</pre>
+<img src="/images/2015-01-01/dot-example.svg" alt="dot example" width="118" height="345">
 </div>
 </div>
 <div class="paragraph">
 <p>Another example</p>
 </div>
-<div class="listingblock">
+<div class="imageblock">
 <div class="content">
-<pre>Failed to generate image: PlantUML image generation failed: Bad Request java.io.IOException: Could not find GraphViz 'dot' tool
-	at org.asciidoctor.diagram.PlantUML.getGraphviz(PlantUML.java:24)
-	at org.asciidoctor.diagram.PlantUML.generate(PlantUML.java:35)
-	at org.asciidoctor.diagram.CommandProcessor.processRequest(CommandProcessor.java:36)
-	at org.asciidoctor.diagram.CommandServer.processRequests(CommandServer.java:38)
-	at org.asciidoctor.diagram.CommandServer.main(CommandServer.java:20)
-
-@startuml
-left to right direction
-skinparam packageStyle rect
-actor customer
-actor clerk
-rectangle checkout {
-  customer -- (checkout)
-  (checkout) .&gt; (payment) : include
-  (help) .&gt; (checkout) : extends
-  (checkout) -- clerk
-}
-@enduml</pre>
+<img src="/images/2015-01-01/plant-example.svg" alt="plant example" width="328" height="310">
 </div>
 </div>
 </div>
