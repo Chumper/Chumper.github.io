@@ -5,8 +5,8 @@ sudo: false
 script: bundle exec rake deploy
 before_install:
   # We need GraphViz to draw figures of graphs and lattices:
-  - "sudo apt-get install graphviz"
-  - "sudo apt-get install plantuml"
+  - "apt-get install graphviz"
+  - "apt-get install plantuml"
 env:
   global:
     secure: ibEvVg8KnOcq9LiHmaJg+WPn6cll+iHCn2bHSOth5hRXOARA6/Me7fDo2EhglCKJBciLOicW/aRjzy3kcXSGMYMD5Fc44u4HZUkDD/5EleqYbK9xg82PmvVTFvvrQcLkqpqD40UwnsKrlwCvtqa7/pRLrR5Mu+8bjX8OItTn81jlap0E1LshDJRsVMMItWJas8w/VmroAOkp0SFuLfnrACFsgNUrTGsWswTK+bxzDEVTxOcL9tYOcCVSx6LCZrL67Uzvk0fPPSPLRsI/qDmtPT4dI8Ra3ICc/guAyPVWbgKVw6dZcJReOjjrMfHc4FBNN8IJSw7l17dhyPOBAAb8H/Tdi4O0we1RD7VKLc6lbIXSKuUBNBPW+/DRPJuZlH8ZjmOUZ/x5o2H55FJ2a/6ivGD0K7uE8n/DjgmJC3nka8svMa+GtVomPZznBgJEDYgEv02KW36wDGNy8AYV70NlvO8pijkg6qR8vvhtBrU3HldkIlql+S5nzVxw99wmbVfpO/WY7Mb3u18Z7ybU0sGtDRCt8xA1sewWGxT77EbgV5iiF+LuXsseBft47Kq8cIp/p3NBLeS687EqEZ5OjMpHGkAQdqgDw0K6gDt0Q2mtoa42KZgawypHjklRDKNJ6vt+i0QLCfVLihn3eBFyypvohcTAwZMFj2FMrdVaWw2IvSI=
