@@ -42,19 +42,149 @@
 <div class="row">
     <!-- Main Blog Content -->
     <div class="large-8 large-offset-2 medium-10 medium-offset-1 columns" role="content">
-        <div class="row inner-header-bar" style="margin-bottom:15px;">
+        <div class="row inner-header-bar shadow" style="margin-bottom:15px;">
     <div class="large-12 columns">
         <h4 style="color:white;">Setup Jekyll, Asciidoctor and PlantUML with Github pages<span style="background: none;"class="right label">January 04, 2016</span></h4>
     </div>
 </div>
+<div class="sect1">
+<h2 id="introduction">Introduction</h2>
+<div class="sectionbody">
 <div class="paragraph">
-<p>I always wanted to blog about my coding experience but ever since i found it hard to set up and maintain a blog.
-In the earlier days that meant to install a blogging application on your own webspace with a database in the background.
-I started the first try with WordPress but found it hard to continue to blog.</p>
+<p>I recently set up a new blog based on <a href="http://jekyllrb.com">Jekyll</a>, <a href="http://asciidoctor.org">Asciidoctor</a> and <a href="http://plantuml.com">PlantUML</a>, where the blog is hosted on <a href="https://pages.github.com/">gh-pages</a>.</p>
 </div>
 <div class="paragraph">
-<p>This days I set up a new blog with <code>Jekyll</code>, <code>AsciiDoc(tor)</code> and <code>PlantUML</code> hosted on <code>github-pages</code>.
-Here is what I did to create a functional blog baked by <code>travis.ci</code>.</p>
+<p>I run into some problem while setting the whole thing up so I will document my steps below.</p>
+</div>
+<div class="sect2">
+<h3 id="clone_and_prepare_the_jekyll_asciidoctor_quickstart_repository">Clone and prepare the Jekyll Asciidoctor Quickstart repository</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>Go to <a href="https://github.com/asciidoctor/jekyll-asciidoc-quickstart" class="bare">https://github.com/asciidoctor/jekyll-asciidoc-quickstart</a> and follow the instructions on the page.</p>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+We need to add a seperate step between Step 3 and 4 if you want to use the blog on your main github domain (<code><a href="http://&lt;username&gt;.github.io" class="bare">http://&lt;username&gt;.github.io</a></code>).
+</td>
+</tr>
+</table>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>If you want to use the blog on the main github domain <code><a href="http://&lt;username&gt;.github.io" class="bare">http://&lt;username&gt;.github.io</a></code> as I did then github will use the <code>master</code> branch as the branch to serve the site from.
+Therefore you need to move all the files from the <code>master</code> branch into another branch:</p>
+</li>
+<li>
+<p>Create a new branch where you write the articles</p>
+<div class="literalblock">
+<div class="content">
+<pre>git checkout -b develop</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>and push it to the repository. Then you can continue with the steps outlined in the tutorial above.</p>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>After <code>Travis</code> build your site we can start to configure the Jekyll installation for the use of <code>PlantUML</code>.</p>
+<div class="paragraph">
+<p>Edit your <code>Gemfile</code> to include the <code>jekyll-plantuml</code> and the <code>asciidoctor-diagram</code> gem (taken from <a href="https://github.com/asciidoctor/jekyll-asciidoc" class="bare">https://github.com/asciidoctor/jekyll-asciidoc</a>):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-ruby" data-lang="ruby">source 'https://rubygems.org'
+
+gem 'jekyll', '~&gt; 2.5'
+gem 'asciidoctor', '~&gt; 1.5'
+gem 'coderay', '1.1.0'
+gem 'rake-jekyll', '~&gt; 1.0'
+gem 'jekyll-plantuml', '~&gt; 1.1' <i class="conum" data-value="1"></i><b>(1)</b>
+
+group :jekyll_plugins do
+  gem "jekyll-asciidoc"
+  gem 'asciidoctor-diagram' <i class="conum" data-value="2"></i><b>(2)</b>
+end</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Here we add the plantuml dependency</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Advise Jekyll to render the diagrams</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This enables your <code>Jekyll</code> instance to render any <code>PlantUML</code> diagram as you can see here:</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="/images/2016-01-04/plantuml-example.svg" alt="plantuml example" width="99" height="116">
+</div>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>For <code>Travis</code> we need to add some configuration to the <code>travis.yml</code> file so it is able to render the diagrams and adds them to the pushed site.</p>
+<div class="paragraph">
+<p>Edit the <code>travis.yml</code> to look like this:</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml" data-lang="yaml">language: ruby
+rvm:
+- 2.2.0
+sudo: false
+script: bundle exec jekyll build &amp;&amp; bundle exec rake deploy <i class="conum" data-value="1"></i><b>(1)</b>
+addons:
+  apt:
+    packages:
+    - graphviz <i class="conum" data-value="2"></i><b>(2)</b>
+env:
+  global:
+    secure: &lt;yourToken&gt;</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>In order to build and include the images correctly Jekyll needs to run twice, therefore we add one build step before the actual deploy.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Travis needs graphviz to render the images, luckily it is whitelisted in the container environment and we can require it here.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>This should be all you need to configure to be able to render code diagrams in your blog.
+You can now start to change the design of the blog in general. On this site for example I used the <code>github</code> theme on <a href="http://themes.asciidoctor.org/preview/" class="bare">http://themes.asciidoctor.org/preview/</a> and changed the layout a little bit.</p>
+</div>
+<div class="paragraph">
+<p><strong>Happy blogging!</strong></p>
+</div>
+</div>
+</div>
 </div>
     </div>  
     <!-- End Main Content -->
