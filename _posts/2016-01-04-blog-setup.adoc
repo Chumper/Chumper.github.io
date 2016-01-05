@@ -1,0 +1,12 @@
+---
+layout: post
+title: Setup Jekyll, Asciidoctor and PlantUML with Github pages
+root: ../../../
+---
+
+I always wanted to blog about my coding experience but ever since i found it hard to set up and maintain a blog.
+In the earlier days that meant to install a blogging application on your own webspace with a database in the background.
+I started the first try with WordPress but found it hard to continue to blog.
+
+This days I set up a new blog with `Jekyll`, `AsciiDoc(tor)` and `PlantUML` hosted on `github-pages`.
+Here is what I did to create a functional blog baked by `travis.ci`.

@@ -1,0 +1,59 @@
+---
+layout: default
+title: Index
+---
+
+{% for post in paginator.posts %}
+<div class="row">
+    <!-- Main Blog Content -->
+    <div class="large-12 columns" role="content">
+    	<a href="{{ post.url }}">
+	        <div class="panel shadow-hover">
+    	    	<span class="right secondary label">{{ post.date | date: '%B %d, %Y' }}</span>
+    	    	<h5>{{ post.title }}</h5>
+        	</div>
+    	</a>
+    </div>  
+    <!-- End Main Content -->
+</div>
+{% endfor %}
+
+<div class="pagination-centered">
+	{% if paginator.total_pages > 1 %}
+	<ul class="pagination">
+  	  <li class="arrow">
+	  {% if paginator.previous_page %}
+	    <a href="{{ paginator.previous_page_path | prepend: site.baseurl | replace: '//', '/' }}">&laquo; Prev</a>
+	  {% else %}
+	    <span>&laquo; Prev</span>
+	  {% endif %}
+	  </li>
+	  {% for page in (1..paginator.total_pages) %}
+  		{% assign low = (page - paginator.page) %}
+  		{% assign high = (page - paginator.page) %}
+  		{% if low < 4 and high > -4 %}
+  			{% assign show = true %}
+		{% else %}
+			{% assign show = false %}
+		{% endif %}
+	  	{% if show == true %}
+		    {% if page == paginator.page %}
+		    	<li class="current"><a href="">{{ page }}</a></li>
+		    {% elsif page == 1 %}
+		      <li><a href="{{ paginator.previous_page_path | prepend: site.baseurl | replace: '//', '/' }}">{{ page }}</a></li>
+		    {% else %}
+		      <li><a href="{{ site.paginate_path | prepend: site.baseurl | replace: '//', '/' | replace: ':num', page }}">{{ page }}</a></li>
+		    {% endif %}
+	    {% endif %}
+	  {% endfor %}
+
+	  <li class="arrow">
+	  {% if paginator.next_page %}
+	    <a href="{{ paginator.next_page_path | prepend: site.baseurl | replace: '//', '/' }}">Next &raquo;</a>
+	  {% else %}
+	    <span>Next &raquo;</span>
+	  {% endif %}
+	  </li>
+	</div>
+	{% endif %}
+</div>
