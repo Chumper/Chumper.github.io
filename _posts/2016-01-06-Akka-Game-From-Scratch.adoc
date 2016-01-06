@@ -1,0 +1,104 @@
+---
+layout: post
+title: An Akka multiplayer game backend from scratch - Part 1
+root: ../../../
+---
+:imagesdir: /images/2016-01-06
+
+Recently I am very interested in http://akka.io/[Akka] for the usage as backbone of a multiplayer game backend.
+At my work http://www.dsfishlabs.com/en[@DsFishlabs] we are using http://projects.spring.io/spring-boot/[Spring Boot] with http://projects.spring.io/spring-cloud/[Spring Cloud] for our internal microservices.
+
+In this series I want to try to build a similar system based on `Akka` with Scala, http://doc.akka.io/docs/akka/snapshot/scala/cluster-sharding.html[Akka Cluster Sharding], http://doc.akka.io/docs/akka/snapshot/scala/persistence.html[Akka Persistence aka. Event Sourcing] and https://en.wikipedia.org/wiki/Domain-driven_design[DDD], so the functionality will be similiar to my set up at work but here I want to try a different direction.
+
+**So lets get started!**
+
+== Ubiquitous language & our first model
+
+In this series I will act as Developer as well as Domain Expert to make things less complicated. I will orientate myself roughly on the feature set we have in our company and the games. 
+Each project should start with an ubiquitous language and the requirements to design a solution, so lets define some terms.
+
+.The Domain Expert says:
+> Each `Player` has some amount of `XP` as well as `Credits`
+
+This introduces three terms:
+
+[horizontal]
+Player:: The person that is using our game backend is identified as a Player with a unique Identifier. 
+XP:: Each `Player` will progress through the game which is indicated by the the amount of the `XP`.
+Credits:: This is the in-game currency that is used to buy all kind of stuff.
+
+---
+
+[plantuml, 2016-01-06-first-model, svg, float="left"]
+.The `Player` with a typed Id
+----
+@startuml
+
+class Player {
+	+ id: PlayerId
+	+ xp: Int
+	+ credits: Int
+}
+
+class PlayerId <<@mmutable>>{
+	+ value: UUID
+}
+
+PlayerId --right-- Player
+
+@enduml
+----
+
+--
+This really simple requirement will lead us to the model represented on the left. Here we modeled the `Player` as an `Aggregate Root` and added a typed Id (`PlayerId`).
+
+This should fullfill all requirements from above (ok, it`s just one...) and ist a great actor. We also included all terms in the ubiquitous language into our model.
+--
+
+[.clearfix]
+The corresponding scala actor should look like this and can be found http://github.io/Chumper/[here]:
+
+[source, scala]
+.Player.scala
+----
+package io.github.chumper.domain
+
+import java.util.UUID
+
+/**
+  * Player Aggregate Root
+  */
+class Player {
+
+  var id: PlayerId = PlayerId(UUID.randomUUID())
+  var xp: Int = 0
+  var credits: Int = 0
+
+}
+
+case class PlayerId(value: UUID)
+
+----
+
+Currently we only have a single class and no actor, there are also no messages that can be send to the player so let us fix that.
+
+---
+
+.The Domain Expert says:
+> A new `Player` will be created when a Person registers on the Backend. +
+> When a `Player` requests his information from the backend then it should return the `Id` and the amount of `XP` as well as the amount of `Credits`  
+
+Alright, so we need to be able to create new `Players` (lets take a REST approach here) and it should be possible to retrieve information about the `Player`.
+
+NOTE: For the sake of simplicity we will take care of authentication later on. +
+However, we will incorporate https://en.wikipedia.org/wiki/HATEOAS[HATEOAS] to make the api discoverable.
+
+**Ok, lets implement the new requirements:**
+
+== Our first Actor
+
+At first let us convert the `Player` class into an event sourced actor:
+
+We also add a new register endpoint to our service:
+
+and connect both together.
