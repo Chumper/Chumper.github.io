@@ -1,0 +1,566 @@
+<!doctype html>
+<!--[if IE 9]>
+<html class="lt-ie10" lang="en"> <![endif]-->
+<html class="no-js" lang="en" data-useragent="Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>An Akka multiplayer game backend from scratch - Part 1</title>
+
+
+    <meta name="description"
+          content="Update what your Blog is about in this section"/>
+
+    <meta name="author" content="Your name goes here"/>
+    <meta name="copyright" content="Maybe consider a Creative Commons license"/>
+
+    <link rel="stylesheet" href="../../../css/foundation.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../css/coderay.css"/>
+    <link rel="stylesheet" href="../../../css/github.css"/>
+    <!-- <link rel="stylesheet" href="../../../css/prettify.css"/> -->
+    <!--  <script src="../../../js/prettify.js"></script> -->
+    
+    <link rel="stylesheet" href="../../../css/zenburn.css">
+    <script src="../../../js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+
+    <script src="../../../js/vendor/modernizr.js"></script>
+</head>
+<body>
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+    <div class="large-10 large-offset-1 medium-10 medium-offset-1 columns shadow">
+        <div class="header-bar row">
+            <div class="large-12 columns">
+                    <h3 style="color:white; border:0;"><a style="color:white;" href="../../../">&#10093; Back to the index</a></h3>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <!-- Main Blog Content -->
+    <div class="large-10 large-offset-1 medium-10 medium-offset-1 columns" role="content">
+        <div class="row inner-header-bar shadow" style="margin-bottom:15px;">
+    <div class="large-12 columns">
+        <h4 style="color:white;">An Akka multiplayer game backend from scratch - Part 1<span style="background: none;"class="right label">January 06, 2016</span></h4>
+    </div>
+</div>
+<div class="paragraph">
+<p>Recently I am very interested in <a href="http://akka.io/">Akka</a> for the usage as backbone of a multiplayer game backend.
+At my work <a href="http://www.dsfishlabs.com/en">@DsFishlabs</a> we are using <a href="http://projects.spring.io/spring-boot/">Spring Boot</a> with <a href="http://projects.spring.io/spring-cloud/">Spring Cloud</a> for our internal microservices.</p>
+</div>
+<div class="paragraph">
+<p>In this series I want to try to build a similar system based on <code>Akka</code> with Scala, <a href="http://doc.akka.io/docs/akka/snapshot/scala/cluster-sharding.html">Akka Cluster Sharding</a>, <a href="http://doc.akka.io/docs/akka/snapshot/scala/persistence.html">Akka Persistence aka. Event Sourcing</a> and <a href="https://en.wikipedia.org/wiki/Domain-driven_design">DDD</a>, so the functionality will be similiar to my set up at work but here I want to try a different direction.</p>
+</div>
+<div class="paragraph">
+<p>All sources for the parts can be found on github, for part1 you should look extractShardId[here]</p>
+</div>
+<div class="paragraph">
+<p><strong>So lets get started!</strong></p>
+</div>
+<div class="sect1">
+<h2 id="ubiquitous_language_our_first_model">Ubiquitous language &amp; our first model</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this series I will act as Developer as well as Domain Expert to make things less complicated. I will orientate myself roughly on the feature set we have in our company and the games.
+Each project should start with an ubiquitous language and the requirements to design a solution, so lets define some terms.</p>
+</div>
+<div class="quoteblock">
+<div class="title">The Domain Expert says:</div>
+<blockquote>
+<div class="paragraph">
+<p>Each <code>Player</code> has some amount of <code>XP</code> as well as <code>Credits</code></p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>This introduces three terms:</p>
+</div>
+<div class="hdlist">
+<table>
+<tr>
+<td class="hdlist1">
+Player
+</td>
+<td class="hdlist2">
+<p>The person that is using our game backend is identified as a Player with a unique Identifier.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+XP
+</td>
+<td class="hdlist2">
+<p>Each <code>Player</code> will progress through the game which is indicated by the amount of <code>XP</code>.</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+Credits
+</td>
+<td class="hdlist2">
+<p>This is the in-game currency that is used to buy all kind of stuff.</p>
+</td>
+</tr>
+</table>
+</div>
+<hr>
+<div class="imageblock" style="float: left">
+<div class="content">
+<img src="/images/2016-01-06/2016-01-06-first-model.svg" alt="The `Player` with a typed Id" width="235" height="103">
+</div>
+<div class="title">Figure 1. The <code>Player</code> with a typed Id</div>
+</div>
+<div class="openblock">
+<div class="content">
+<div class="paragraph">
+<p>This really simple requirement will lead us to the model represented on the left. Here we modeled the <code>Player</code> as an <code>Aggregate Root</code> and added a typed Id (<code>PlayerId</code>).</p>
+</div>
+<div class="paragraph">
+<p>This should fullfill all requirements from above (ok, it`s just one&#8230;&#8203;) and its a great class. We also included all terms in the ubiquitous language into our model.</p>
+</div>
+</div>
+</div>
+<div class="paragraph clearfix">
+<p>The corresponding scala class should look like this:</p>
+</div>
+<div class="listingblock">
+<div class="title">Player.scala</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-scala" data-lang="scala">class Player {
+  var id: PlayerId = PlayerId(UUID.randomUUID.toString)
+  var xp: Int = 0
+  var credits: Int = 0
+}
+
+case class PlayerId(value: String)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Perfect, all requirements are met&#8230;&#8203;<br>
+but we only have a single class that is not really useful, there are also no messages that can be send to the player and it will be initialized with a random <code>UUID</code> that we cannot control, so let us fix that.</p>
+</div>
+<hr>
+<div class="quoteblock">
+<div class="title">The Domain Expert says:</div>
+<blockquote>
+<div class="paragraph">
+<p>A new <code>Player</code> will be created when a Person registers on the Backend.<br>
+It will the be initialized with a given amount of <code>XP</code> and <code>Credits</code> (in this case 0)<br>
+When a <code>Player</code> requests his information from the backend then it should return the <code>Id</code> and the amount of <code>XP</code> as well as the amount of <code>Credits</code></p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Alright, so we need to be able to create new <code>Players</code> (lets take a REST approach here) and it should be possible to retrieve information about the <code>Player</code>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+For the sake of simplicity we will take care of authentication later on.<br>
+We will also incorporate <a href="https://en.wikipedia.org/wiki/HATEOAS">HATEOAS</a> to make the api discoverable at a later point.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><strong>Ok, lets implement the new requirements:</strong></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="our_first_actor">Our first Actor</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>At first let us convert the <code>Player</code> class into an event sourced actor, I will describe the interessting parts:</p>
+</div>
+<div class="listingblock">
+<div class="title">PlayerActor.scala</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-scala" data-lang="scala">class PlayerActor extends PersistentActor {
+
+  var id: PlayerId = PlayerId(self.path.name) <i class="conum" data-value="1"></i><b>(1)</b>
+  var xp: Int = _
+  var credits: Int = _
+
+  // self.path.name is the entity identifier (utf-8 URL-encoded)
+  override def persistenceId: String = "Player-" + self.path.name
+
+  val log = Logging(context.system, this)
+
+  override def receiveCommand = {
+    case init: InitializePlayer =&gt; <i class="conum" data-value="2"></i><b>(2)</b>
+      persist(PlayerInitialized(init.playerId, init.xp, init.credits)) { ev =&gt; <i class="conum" data-value="3"></i><b>(3)</b>
+        initialize(ev)
+        sender() ! ev <i class="conum" data-value="4"></i><b>(4)</b>
+      }
+    case GetPlayerInformation =&gt; sender() ! PlayerInformation(id, xp, credits) <i class="conum" data-value="5"></i><b>(5)</b>
+    case _ =&gt; log.info("received unknown message")
+  }
+
+  override def receiveRecover = { <i class="conum" data-value="6"></i><b>(6)</b>
+    case init: PlayerInitialized =&gt; initialize(init)
+    case _ =&gt; log.info("received unknown message")
+  }
+
+  def initialize(init: PlayerInitialized) = { <i class="conum" data-value="7"></i><b>(7)</b>
+    this.xp = init.xp
+    this.credits = init.credits
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>As you will see later we can derive the Id of the <code>Player</code> from the actor path, so a <code>Player</code> always has an Id.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>To implement the requirement that the <code>Player</code> should be initialized with some values we defined the corresponding event.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>First we will persist the resulting event, and after it was persisted we call the <code>initialized</code> method to initalize the <code>Player</code></td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>After initialization we will return the event to the sender.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>Here we implemented the requirement that a <code>Player</code> should be able to return its state. There is no command that will result in an event, so we just return the data.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="6"></i><b>6</b></td>
+<td>This method will be called when events on this actor will be replayed (e.g. it has been relocated to another node). Here we call the initialize method directly, as we dont need to persist the event (it is already persisted).</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="7"></i><b>7</b></td>
+<td>The initialize method will alter the state of the actor and sets the <code>XP</code> and <code>Credits</code> to the event values.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>As you can see I extended the <code>PersistentActor</code> Trait which makes sense because our actor will use <code>Event Sourcing</code> as persistence mechanism.</p>
+</div>
+<div class="paragraph">
+<p>The companion object looks like this, here we define the events:</p>
+</div>
+<div class="listingblock">
+<div class="title">Companion object of the PlayerActor</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-scala" data-lang="scala">object PlayerActor {
+  // define compatible commands
+  case class InitializePlayer(playerId: PlayerId, xp: Int, credits: Int)
+  case class GetPlayerInformation(playerId: PlayerId)
+
+  // define compatible events
+  case class PlayerInitialized(playerId: PlayerId, xp: Int, credits: Int)
+
+  // custom responses
+  case class PlayerInformation(playerId: PlayerId, xp: Int, credits: Int)
+
+  def extractEntityId(): ShardRegion.ExtractEntityId = { <i class="conum" data-value="1"></i><b>(1)</b>
+    case msg@InitializePlayer(id, _, _) =&gt; (id.value.toString, msg)
+    case msg@GetPlayerInformation(id) =&gt; (id.value.toString, msg)
+  }
+
+  def extractShardId(numberOfShards: Int): ShardRegion.ExtractShardId = { <i class="conum" data-value="2"></i><b>(2)</b>
+    case InitializePlayer(id, _, _) =&gt; Math.abs(id.hashCode() % numberOfShards).toString
+    case GetPlayerInformation(id) =&gt;  Math.abs(id.hashCode() % numberOfShards).toString
+  }
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>To make use of <a href="http://doc.akka.io/docs/akka/snapshot/scala/cluster-sharding.html">Akka Cluster Sharding</a> we need to define an <code>extractEntityId</code> method so akka knows which actor should receive the current message. Here we return the Id of the <code>Player</code> which will also be the path name of the actor (so we can extract the Id in the actor).</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>We also need to define a <code>extractShardId</code> mehtod so akka knows which shard should responsible for the actor (in this sample we define 100 shards) so it can distribute the actors on each node.</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="the_main_application">The main application</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>We also add a new register endpoint to our service and connect it together:</p>
+</div>
+<div class="listingblock">
+<div class="title">Application.scala</div>
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-scala" data-lang="scala">object Application extends App with AkkaInjectable {
+
+  implicit val system = ActorSystem()
+  implicit val executor = system.dispatcher
+  implicit val materializer = ActorMaterializer()
+  implicit val timeout = Timeout(5 seconds)
+
+  val config = ConfigFactory.load()
+
+  val logger: LoggingAdapter = Logging(system, getClass)
+
+  implicit val appModule = new PlayerModule <i class="conum" data-value="1"></i><b>(1)</b>
+  val player = inject[ActorRef]('player) <i class="conum" data-value="2"></i><b>(2)</b>
+
+  val routes = {
+    logRequestResult("server") {
+      (post &amp; path("register")) {
+        complete {
+          // create a new user and send it a message
+          val playerId = PlayerId(UUID.randomUUID().toString) <i class="conum" data-value="3"></i><b>(3)</b>
+          (player ? InitializePlayer(playerId, 0, 0)).mapTo[PlayerInitialized].map { ev: PlayerInitialized =&gt; ev.playerId.value } <i class="conum" data-value="4"></i><b>(4)</b>
+        }
+      }
+    }
+  }
+
+  Http().bindAndHandle(routes, config.getString("http.interface"), config.getInt("http.port")) <i class="conum" data-value="5"></i><b>(5)</b>
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Load the <code>PlayerModule</code> where the cluster declarations for our player actors are defined.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Inject the reference of the sharding actor so we can send messages to it.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Create a new Id</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>Send the command to the actor (akka will take care of the routing and instantiation) and wait for the actor to respond (here we wait up to 5 seconds)</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="5"></i><b>5</b></td>
+<td>Start the Http server and bind the given routes on the given port.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>In this series I will use <a href="http://scaldi.org/">Scaldi</a> for the dependency injection, therefore we need to declare the cluster sharding:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-scala" data-lang="scala">class PlayerModule(implicit system: ActorSystem) extends Module {
+
+  val numberOfShards = 100
+
+  val playerRegion: ActorRef = ClusterSharding(system).start(
+    typeName = "Player",
+    entityProps = Props[PlayerActor],
+    settings = ClusterShardingSettings(system),
+    extractEntityId = PlayerActor.extractEntityId(), <i class="conum" data-value="1"></i><b>(1)</b>
+    extractShardId = PlayerActor.extractShardId(numberOfShards) <i class="conum" data-value="2"></i><b>(2)</b>
+  )
+
+  bind[ActorRef] as 'player to playerRegion <i class="conum" data-value="3"></i><b>(3)</b>
+
+}</code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>Reference the <code>extractEntityId</code> method given above.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>Reference the <code>extractShardId</code> method given above.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>Bind the shard actor reference to <code>player</code> so we can inject it later</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>You can find the complete source code <a href="https://github.com/Chumper/akka-game-backend-from-scratch/tree/master/part1">here</a></p>
+</div>
+<div class="paragraph">
+<p><strong>Great, that looks like it for now</strong></p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="test_it">Test it</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Let us go ahead and make a quick benchmark for the current part:</p>
+</div>
+<div class="paragraph">
+<p>Start the server in your IDE or do</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>sbt run</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>I am using <a href="https://github.com/jkbrzt/httpie">Httpie</a> which makes the life so much easier :)<br>
+You can then <code>POST</code> to the endpoint <code>/register</code> like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash" data-lang="bash">&gt; http POST :9000/register
+
+HTTP/1.1 200 OK
+Content-Length: 36
+Content-Type: text/plain; charset=UTF-8
+Date: Sun, 10 Jan 2016 18:44:59 GMT
+Server: akka-http/2.4.1
+
+62b058cf-6d73-4d5c-9855-2aed6e36ad3d</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let us also run a short benchmark on it (10 seconds, 10 concurrent requests):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash" data-lang="bash">&gt; ab -t10 -c10 -mPOST http://localhost:9000/register
+
+This is ApacheBench, Version 2.3 &lt;$Revision: 1663405 $&gt;
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking localhost (be patient)
+Completed 5000 requests
+Completed 10000 requests
+Finished 10377 requests
+
+
+Server Software:        akka-http/2.4.1
+Server Hostname:        localhost
+Server Port:            9000
+
+Document Path:          /register
+Document Length:        36 bytes
+
+Concurrency Level:      10
+Time taken for tests:   10.000 seconds
+Complete requests:      10377
+Failed requests:        0
+Total transferred:      2044269 bytes
+HTML transferred:       373572 bytes
+Requests per second:    1037.70 [#/sec] (mean)
+Time per request:       9.637 [ms] (mean)
+Time per request:       0.964 [ms] (mean, across all concurrent requests)
+Transfer rate:          199.64 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.1      0       3
+Processing:     2    9  15.0      8     474
+Waiting:        2    9  15.0      8     474
+Total:          3   10  15.0      9     474
+
+Percentage of the requests served within a certain time (ms)
+  50%      9
+  66%      9
+  75%     10
+  80%     10
+  90%     11
+  95%     12
+  98%     14
+  99%     17
+ 100%    474 (longest request)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Nice</strong>, we got 10.000 new users in 10 seconds, that is impressive (our spring server does not even get close&#8230;&#8203;), so I am really looking forward to part2.</p>
+</div>
+<div class="paragraph">
+<p>You can find the whole code for part 1 <a href="https://github.com/Chumper/akka-game-backend-from-scratch/tree/master/part1">here</a></p>
+</div>
+<div class="paragraph">
+<p>Let me know what you think.</p>
+</div>
+<div class="paragraph">
+<p><strong>Happy hakking</strong></p>
+</div>
+</div>
+</div>
+    </div>  
+    <!-- End Main Content -->
+</div>
+
+<!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+
+<footer class="row">
+    <div class="large-10 large-offset-1 medium-10 medium-offset-1 columns shadow">
+        <div class="row footer-bar">
+            <div class="large-7 medium-7 small-12 columns">
+                <div class="panel footer-bar">
+                    <h5 style="color:white">About Nils</h5>
+                    <p style="color: white">Nils is a Java Developer who is interested in Java and Scala, Actor Systems and Akka, Domain Driven Design, Reactive Systems and much more</p>
+                    <p style="color: white">Here he will blog about all of the above topics during his regular coding experience and try to improve his skills.</p>
+                </div>
+            </div>
+            <div class="large-4 medium-4 small-12 columns">
+                <div class="panel footer-bar">
+                    <h5 style="color:white">Links</h5>
+                    <ul class="no-bullet">
+                    <li><a style="color:white" href="https://github.com/Chumper">Github</a></li>
+                    <li><a style="color:white" href="https://de.linkedin.com/in/nils-plaschke-ba5b71103">Linkedin</a></li>
+                    <li><a style="color:white" href="https://www.xing.com/profile/Nils_Plaschke">Xing</a></li>
+                </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row inner-footer-bar">
+        </div>
+    </div>
+</footer>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-72061200-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+<script src="../../../js/vendor/jquery.js"></script>
+<script src="../../../js/foundation.min.js"></script>
+<script src="../../../js/toc.js"></script>
+<script>
+    $(document).foundation();
+</script>
+<script src="../../../js/vendor/jquery.js"></script>
+<script src="../../../js/foundation/foundation.js"></script>
+<script>
+    $(document).foundation();
+
+    var doc = document.documentElement;
+    doc.setAttribute('data-useragent', navigator.userAgent);
+</script>
+</body>
+</html>
